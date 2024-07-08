@@ -2,18 +2,18 @@
   <div>
     <h1>Items</h1>
     <ul>
-      <li v-for="item in items" :key="item.id">{{ item.name }} - {{ item.manufacturer }}</li>
+      <li v-for="item in items" :key="item.id">({{ item.id }}) {{ item.name }} - {{ item.manufacturer }}</li>
     </ul>
-    <input v-model="name" placeholder="Name" />
-    <input v-model="manufacturer" placeholder="Manufacturer" />
-    <button @click="addItem">Add Item</button>
-    <div v-if="loading">Loading...</div>
-    <div v-if="error">Error: {{ error.message }}</div>
+    <form>
+      <input v-model="name" placeholder="Name" />
+      <input v-model="manufacturer" placeholder="Manufacturer" />
+    <button @click="handleAddItem">Add Item</button>
+    </form>
   </div>
 </template>
 
 <script>
-import { ref, watch } from 'vue';
+import { ref, watchEffect } from 'vue';
 import { useQuery, useMutation } from '@vue/apollo-composable';
 import gql from 'graphql-tag';
 
@@ -28,7 +28,7 @@ const GET_ITEMS = gql`
 `;
 
 const ADD_ITEM = gql`
-  mutation AddItem($name: String!, $manufacturer: String!) {
+  mutation addItem($name: String!, $manufacturer: String!) {
     createItem(name: $name, manufacturer: $manufacturer) {
       id
       name
@@ -38,47 +38,38 @@ const ADD_ITEM = gql`
 `;
 
 export default {
-  name: 'ItemsPage',
   setup() {
-    const { loading, error, result } = useQuery(GET_ITEMS);
-    const addItemMutation = useMutation(ADD_ITEM, {
-      refetchQueries: [{ query: GET_ITEMS }]
-    });
-
+    const { result, refetch } = useQuery(GET_ITEMS);
     const name = ref('');
     const manufacturer = ref('');
+    const { mutate } = useMutation(ADD_ITEM, {
+      onCompleted: () => {
+        refetch();
+      },
+    });
+
+
     const items = ref([]);
 
-    watch(result, () => {
+    watchEffect(() => {
       if (result.value) {
         items.value = result.value.items;
       }
     });
 
-    const addItem = async () => {
+    const handleAddItem = async () => {
       if (name.value && manufacturer.value) {
-        try {
-          await addItemMutation({
-            variables: {
-              name: name.value,
-              manufacturer: manufacturer.value
-            }
-          });
-          name.value = '';
-          manufacturer.value = '';
-        } catch (err) {
-          console.error("Error adding item:", err);
-        }
+        mutate({ name: name.value, manufacturer: manufacturer.value });
+        name.value = '';
+        manufacturer.value = '';
       }
     };
 
     return {
-      loading,
-      error,
       items,
       name,
       manufacturer,
-      addItem
+      handleAddItem
     };
   }
 };
