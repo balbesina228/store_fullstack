@@ -11,7 +11,7 @@ const typeDefs = gql`
   }
 
   type Query {
-    items: [Item]
+    items(limit: Int, offset: Int, search: String): [Item]
   }
 
   type Mutation {
@@ -21,8 +21,24 @@ const typeDefs = gql`
 
 const resolvers = {
   Query: {
-    items: async () => await prisma.item.findMany(),
+    items: async (_, { limit, offset, search }) => {
+      const where = search
+        ? {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { manufacturer: { contains: search, mode: 'insensitive' } },
+            ],
+          }
+        : {};
+
+      return await prisma.item.findMany({
+        where,
+        take: limit,
+        skip: offset,
+      });
+    },
   },
+
   Mutation: {
     createItem: async (_, { name, manufacturer }) => {
       return await prisma.item.create({
