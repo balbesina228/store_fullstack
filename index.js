@@ -16,6 +16,11 @@ const typeDefs = gql`
 
   type Mutation {
     createItem(name: String, manufacturer: String): Item
+    deleteItems(ids: [Int!]!): BatchPayload
+  }
+
+  type BatchPayload {
+    count: Int!
   }
 `;
 
@@ -47,6 +52,14 @@ const resolvers = {
           manufacturer,
         },
       });
+    },
+    deleteItems: async (_, { ids }) => {
+      const deleteResult = await prisma.item.deleteMany({
+        where: {
+          id: { in: ids },
+        },
+      });
+      return { count: deleteResult.count };
     },
   },
 };
