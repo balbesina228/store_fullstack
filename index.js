@@ -8,6 +8,7 @@ const typeDefs = gql`
     id: Int
     name: String
     manufacturer: String
+    amount: Int
   }
 
   type Query {
@@ -15,7 +16,7 @@ const typeDefs = gql`
   }
 
   type Mutation {
-    createItem(name: String, manufacturer: String): Item
+    createItem(name: String, manufacturer: String, amount: Int): Item
     deleteItems(ids: [Int!]!): BatchPayload
   }
 
@@ -45,18 +46,39 @@ const resolvers = {
   },
 
   Mutation: {
-    createItem: async (_, { name, manufacturer }) => {
-      const lastItem = await prisma.item.findFirst({
-        orderBy: { id: 'desc' },
-      });
-      const nextId = lastItem ? lastItem.id + 1 : 1;
-      return prisma.item.create({
-        data: {
-          id: nextId,
-          name,
-          manufacturer,
+    createItem: async (_, { name, manufacturer, amount }) => {
+      const existingItem = await prisma.item.findFirst({
+        where: {
+        name,
+        manufacturer
         },
       });
+
+      if (existingItem) {
+        return prisma.item.update({
+          where: {
+          id: existingItem.id,
+          name,
+          manufacturer
+          },
+          data: {
+            amount: existingItem.amount + amount,
+          },
+        });
+      } else {
+        const lastItem = await prisma.item.findFirst({
+          orderBy: { id: 'desc' },
+        });
+        const nextId = lastItem ? lastItem.id + 1 : 1;
+        return prisma.item.create({
+          data: {
+            id: nextId,
+            name,
+            manufacturer,
+            amount,
+          },
+        });
+      }
     },
     deleteItems: async (_, { ids }) => {
       const deleteResult = await prisma.item.deleteMany({

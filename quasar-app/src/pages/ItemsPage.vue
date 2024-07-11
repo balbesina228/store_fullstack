@@ -53,6 +53,7 @@
         <q-card-section>
           <q-input v-model="name" label="Name" />
           <q-input v-model="manufacturer" label="Manufacturer" />
+          <q-input v-model="amount" type="number" label="Amount" />
         </q-card-section>
 
         <q-card-actions align="right">
@@ -75,16 +76,18 @@ const GET_ITEMS = gql`
       id
       name
       manufacturer
+      amount
     }
   }
 `;
 
 const ADD_ITEM = gql`
-  mutation AddItem($name: String!, $manufacturer: String!) {
-    createItem(name: $name, manufacturer: $manufacturer) {
+  mutation AddItem($name: String!, $manufacturer: String!, $amount: Int!) {
+    createItem(name: $name, manufacturer: $manufacturer, amount: $amount) {
       id
       name
       manufacturer
+      amount
     }
   }
 `;
@@ -101,6 +104,7 @@ export default {
   setup() {
     const name = ref('');
     const manufacturer = ref('');
+    const amount = ref(1);
     const limit = ref(10);
     const offset = ref(0);
     const filter = ref('');
@@ -177,15 +181,17 @@ export default {
     });
 
     const handleAddItem = async () => {
-      if (name.value && manufacturer.value) {
+      if (name.value && manufacturer.value && amount.value > 0) {
         await mutate({
             name: name.value,
             manufacturer: manufacturer.value,
+            amount: amount.value
           }).catch((error) => {
           console.error('Error adding item:', error);
         });
       name.value = '';
       manufacturer.value = '';
+      amount.value = 1;
       isAddDialogOpen.value = false;
       refetch().catch((error) => console.error('Mutation refetch error:', error));
       }
@@ -200,12 +206,14 @@ export default {
       { name: 'id', align: 'center', label: 'ID', field: 'id', sortable: true },
       { name: 'name', align: 'center', label: 'Name', field: 'name', sortable: true },
       { name: 'manufacturer', align: 'center', label: 'Manufacturer', field: 'manufacturer', sortable: true },
+      { name: 'amount', align: 'center', label: 'Amount', field: 'amount', sortable: true }
     ];
 
     return {
       items,
       name,
       manufacturer,
+      amount,
       handleAddItem,
       columns,
       filter,
