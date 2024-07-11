@@ -46,8 +46,13 @@ const resolvers = {
 
   Mutation: {
     createItem: async (_, { name, manufacturer }) => {
-      return await prisma.item.create({
+      const lastItem = await prisma.item.findFirst({
+        orderBy: { id: 'desc' },
+      });
+      const nextId = lastItem ? lastItem.id + 1 : 1;
+      return prisma.item.create({
         data: {
+          id: nextId,
           name,
           manufacturer,
         },
@@ -59,6 +64,20 @@ const resolvers = {
           id: { in: ids },
         },
       });
+
+      const items = await prisma.item.findMany({
+        orderBy: { id: 'asc' },
+      });
+
+      // Reassign IDs
+      await Promise.all(
+        items.map((item, index) => {
+          return prisma.item.update({
+            where: { id: item.id },
+            data: { id: index + 1 },
+          });
+        })
+      );
       return { count: deleteResult.count };
     },
   },
